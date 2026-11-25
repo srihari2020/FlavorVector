@@ -1,0 +1,133 @@
+[
+  {
+    "id": "sub_buttermilk_lemon",
+    "target": "Buttermilk",
+    "substitute": "1 cup whole milk + 1 tbsp fresh lemon juice (rest 10 min)",
+    "role": "Acidic liquid, protein tenderizer, activates baking soda for leavening",
+    "flavor_profile": "Tangy, bright citrus acidity, mild dairy creaminess",
+    "compounds": [
+      "citric acid",
+      "lactic acid",
+      "milk triglycerides"
+    ],
+    "best_in": [
+      "pancakes",
+      "waffles",
+      "biscuits",
+      "quick breads"
+    ],
+    "avoid_in": [
+      "thick salad dressings without extra emulsifier"
+    ],
+    "vegan": false
+  },
+  {
+    "id": "sub_buttermilk_yogurt",
+    "target": "Buttermilk",
+    "substitute": "3/4 cup plain yogurt + 1/4 cup water",
+    "role": "Lactic acid source for baking soda leavening plus cultured viscosity",
+    "flavor_profile": "Rich cultured tang, creamy dairy finish",
+    "compounds": [
+      "lactic acid",
+      "diacetyl",
+      "acetaldehyde"
+    ],
+    "best_in": [
+      "pancakes",
+      "muffins",
+      "cakes",
+      "marinades"
+    ],
+    "avoid_in": [
+      "thin batters where viscosity is not adjusted"
+    ],
+    "vegan": false
+  },
+  {
+    "id": "sub_buttermilk_vegan",
+    "target": "Buttermilk",
+    "substitute": "1 cup unsweetened soy milk + 1 tbsp apple cider vinegar",
+    "role": "Curdles soy protein to mimic dairy body and provides acid for baking soda",
+    "flavor_profile": "Sharp tang, neutral-nutty base",
+    "compounds": [
+      "acetic acid",
+      "soy proteins"
+    ],
+    "best_in": [
+      "vegan pancakes",
+      "cornbread",
+      "quick breads"
+    ],
+    "avoid_in": [
+      "delicate custards"
+    ],
+    "vegan": true
+  },
+  {
+    "id": "sub_egg_leavener",
+    "target": "1 Large Egg (Leavening & Lift)",
+    "substitute": "1 tsp baking soda + 1 tbsp white or apple cider vinegar",
+    "role": "Rapid CO2 gas release for airy crumb structure",
+    "flavor_profile": "Neutral",
+    "compounds": [
+      "sodium bicarbonate",
+      "acetic acid"
+    ],
+    "best_in": [
+      "cupcakes",
+      "light cakes",
+      "quick breads"
+    ],
+    "avoid_in": [
+      "meatballs",
+      "dense brownies",
+      "custards"
+    ],
+    "vegan": true
+  },
+  {
+    "id": "sub_egg_binder",
+    "target": "1 Large Egg (Moisture & Binding)",
+    "substitute": "1 tbsp ground flaxseed + 3 tbsp warm water (rest 10 min)",
+    "role": "Mucilage gel network that binds particles and retains moisture",
+    "flavor_profile": "Mild, earthy, slightly nutty",
+    "compounds": [
+      "flax mucilage polysaccharides",
+      "alpha-linolenic acid"
+    ],
+    "best_in": [
+      "meatballs",
+      "veggie burgers",
+      "oatmeal cookies",
+      "pancakes"
+    ],
+    "avoid_in": [
+      "meringues",
+      "angel food cake",
+      "souffles"
+    ],
+    "vegan": true
+  },
+  {
+    "id": "sub_fish_sauce_umami",
+    "target": "1 tbsp Fish Sauce",
+    "substitute": "1 tbsp soy sauce + 1/4 tsp rice vinegar + pinch of crushed nori or mushroom powder",
+    "role": "Deep glutamate-ribonucleotide umami synergy and salinity",
+    "flavor_profile": "Savory, oceanic umami, balanced salt-acid",
+    "compounds": [
+      "glutamic acid",
+      "inosinate",
+      "guanylate"
+    ],
+    "best_in": [
+      "stir-fries",
+      "broths",
+      "curries",
+      "dipping sauces"
+    ],
+    "avoid_in": [
+      "raw dishes requiring fermented anchovy aroma"
+    ],
+    "vegan": true
+  }
+]
