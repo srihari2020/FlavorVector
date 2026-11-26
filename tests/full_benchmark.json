@@ -1,0 +1,68 @@
+{
+  "system": {
+    "device": "cuda",
+    "gpu_name": "NVIDIA GeForce RTX 5060 Laptop GPU",
+    "cold_boot_sec": 3.71,
+    "peak_ram_mb": 2465.7,
+    "vram_mb": 635.6,
+    "chroma_mb": 3.64
+  },
+  "atlas": {
+    "sub_count": 60,
+    "pair_count": 83,
+    "total_vectors": 143,
+    "tastes": {
+      "sweet": 39,
+      "fatty_rich": 41,
+      "kokumi": 29,
+      "sour": 33,
+      "astringent": 11,
+      "cooling": 24,
+      "umami": 64,
+      "salty": 13,
+      "spicy_pungent": 22,
+      "bitter": 21
+    },
+    "cuisines": {
+      "Universal Pantry": 49,
+      "Indian & South Asian": 33,
+      "Baking & Pastry": 13,
+      "Middle Eastern & North African": 9,
+      "East & Southeast Asian": 17,
+      "Mediterranean & European": 15,
+      "Latin American": 5,
+      "American": 2
+    }
+  },
+  "bi_encoder": {
+    "hit_at_1": 100.0,
+    "hit_at_3": 100.0,
+    "mrr": 100.0,
+    "ndcg_at_3": 100.0
+  },
+  "two_stage": {
+    "hit_at_1": 100.0,
+    "hit_at_3": 100.0,
+    "mrr": 100.0,
+    "ndcg_at_3": 100.0
+  },
+  "latency": {
+    "sub_stage1_mean_ms": 6.63,
+    "sub_stage2_mean_ms": 22.02,
+    "sub_total_p50_ms": 29.11,
+    "sub_total_p95_ms": 31.3,
+    "sub_total_mean_ms": 28.65,
+    "pair_p50_ms": 39.74,
+    "pair_p95_ms": 46.36,
+    "pair_mean_ms": 40.25,
+    "bridge_p50_ms": 61.56,
+    "bridge_p95_ms": 64.44,
+    "bridge_mean_ms": 61.55,
+    "cpu_sub_mean_ms": 182.77
+  },
+  "throughput_qps": {
+    "substitutions": 34.9,
+    "pairings": 24.8,
+    "bridges": 16.2
+  }
+}
