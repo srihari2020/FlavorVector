@@ -8,3 +8,4 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 chroma_db/
+hf_model_dist/
