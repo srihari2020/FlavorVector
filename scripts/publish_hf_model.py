@@ -35,14 +35,28 @@ base_model:
   - BAAI/bge-base-en-v1.5
   - cross-encoder/ms-marco-MiniLM-L-6-v2
 tags:
-  - sentence-transformers
-  - chromadb
   - semantic-search
+  - vector-database
+  - chromadb
+  - sentence-transformers
+  - embeddings
   - reranking
+  - two-stage-retrieval
+  - information-retrieval
+  - nlp
+  - rag
+  - bge-base
+  - cross-encoder
+  - python
+  - fastapi
+  - streamlit
+  - docker
   - food-science
   - flavor-pairing
   - culinary-ai
-  - information-retrieval
+  - recipe-recommendation
+  - cooking
+  - taste-chemistry
 ---
 
 # FlavorVector
