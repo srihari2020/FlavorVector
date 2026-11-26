@@ -168,7 +168,8 @@ def evaluate_models(engine: FlavorEngine) -> dict:
 
     n = len(BENCHMARK_CASES)
     return {
-        "bi_encoder": {
+        "accuracy": {
+            "bi_encoder": {
             "hit_at_1": round(bi_h1 / n * 100, 1),
             "hit_at_3": round(bi_h3 / n * 100, 1),
             "mrr": round(float(np.mean(bi_rrs)) * 100, 1),
@@ -179,6 +180,7 @@ def evaluate_models(engine: FlavorEngine) -> dict:
             "hit_at_3": round(rerank_h3 / n * 100, 1),
             "mrr": round(float(np.mean(rerank_rrs)) * 100, 1),
             "ndcg_at_3": round(float(np.mean(rerank_ndcgs)) * 100, 1),
+        },
         },
         "latency": {
             "sub_stage1_mean_ms": round(float(np.mean(stage1_ms_list)), 2),
