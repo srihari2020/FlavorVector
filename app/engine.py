@@ -33,6 +33,7 @@ class FlavorEngine:
         cuisine_filter: str | None = None,
         vegan_only: bool = False,
         top_k: int = 4,
+        min_confidence: float = 0.12,
     ) -> list[dict]:
         total_docs = self.sub_collection.count()
         if total_docs == 0:
@@ -52,7 +53,7 @@ class FlavorEngine:
 
         raw = self.sub_collection.query(
             query_embeddings=q_vec,
-            n_results=min(25, total_docs),
+            n_results=min(30, total_docs),
             where=where_filter,
         )
 
@@ -61,7 +62,6 @@ class FlavorEngine:
         if not docs:
             return []
 
-        # Optional post-filtering by taste or cuisine corner
         filtered = []
         for doc, meta in zip(docs, metas):
             if taste_filter and taste_filter != "All Tastes":
@@ -73,7 +73,7 @@ class FlavorEngine:
             filtered.append((doc, meta))
 
         if not filtered:
-            filtered = list(zip(docs, metas))
+            return []
 
         scores = self.cross_encoder.predict([(search_text, doc) for doc, _ in filtered])
         ranked = sorted(
@@ -85,7 +85,7 @@ class FlavorEngine:
         results = []
         for (doc, meta), score in ranked:
             prob = _sigmoid(score)
-            if prob < 0.08 and results:
+            if prob < min_confidence:
                 continue
             results.append(
                 {
@@ -130,7 +130,7 @@ class FlavorEngine:
         prompt = " ".join(prompt_parts)
         q_vec = self.bi_encoder.encode([prompt], normalize_embeddings=True).tolist()
 
-        raw = self.pair_collection.query(query_embeddings=q_vec, n_results=min(30, total_docs))
+        raw = self.pair_collection.query(query_embeddings=q_vec, n_results=min(35, total_docs))
         docs = raw["documents"][0]
         metas = raw["metadatas"][0]
 
@@ -147,11 +147,7 @@ class FlavorEngine:
             filtered.append((doc, meta))
 
         if not filtered:
-            filtered = [
-                (doc, meta)
-                for doc, meta in zip(docs, metas)
-                if meta.get("ingredient", "").lower() not in normalized_inputs
-            ]
+            return []
 
         scores = self.cross_encoder.predict([(prompt, doc) for doc, _ in filtered])
         ranked = sorted(
