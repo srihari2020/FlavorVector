@@ -38,12 +38,7 @@ class FlavorEngine:
         ids, docs, metas = [], [], []
         for r in cards:
             tastes_str = ", ".join(r["tastes"])
-            lead = (
-                f"To replace {r['target']} in {', '.join(r['best_in'][:4])}, use {r['substitute']}. "
-                f"It delivers {tastes_str} taste via {r['role']}."
-            )
             doc = (
-                f"{lead}\n"
                 f"Replaces: {r['target']}\n"
                 f"Substitute: {r['substitute']}\n"
                 f"Taste Dimensions: {tastes_str}\n"

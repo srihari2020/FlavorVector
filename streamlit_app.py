@@ -49,6 +49,12 @@ with st.sidebar:
     c1, c2 = st.columns(2)
     c1.metric("Substitutions", engine.sub_collection.count())
     c2.metric("Ingredients", engine.pair_collection.count())
+    if st.button("🗑️ Clear Live Web Cache", use_container_width=True):
+        for col in (engine.sub_collection, engine.pair_collection):
+            live_ids = [i for i in col.get()["ids"] if i.startswith("live_")]
+            if live_ids:
+                col.delete(ids=live_ids)
+        st.rerun()
     st.divider()
     st.markdown(
         "**Hybrid Retrieval Mode**\n"
