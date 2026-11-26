@@ -29,22 +29,30 @@ class FlavorEngine:
         self,
         query: str,
         dish_context: str | None = None,
+        taste_filter: str | None = None,
+        cuisine_filter: str | None = None,
         vegan_only: bool = False,
-        top_k: int = 3,
+        top_k: int = 4,
     ) -> list[dict]:
         total_docs = self.sub_collection.count()
         if total_docs == 0:
             return []
 
-        search_text = f"{query} (dish context: {dish_context})" if dish_context else query
-        q_vec = self.bi_encoder.encode([search_text], normalize_embeddings=True).tolist()
+        parts = [query]
+        if dish_context:
+            parts.append(f"dish context: {dish_context}")
+        if taste_filter and taste_filter != "All Tastes":
+            parts.append(f"taste profile: {taste_filter}")
+        if cuisine_filter and cuisine_filter != "All Corners":
+            parts.append(f"cuisine: {cuisine_filter}")
+        search_text = " | ".join(parts)
 
-        n_candidates = min(max(top_k * 3, 10), total_docs)
+        q_vec = self.bi_encoder.encode([search_text], normalize_embeddings=True).tolist()
         where_filter = {"vegan": True} if vegan_only else None
 
         raw = self.sub_collection.query(
             query_embeddings=q_vec,
-            n_results=n_candidates,
+            n_results=min(25, total_docs),
             where=where_filter,
         )
 
@@ -53,57 +61,97 @@ class FlavorEngine:
         if not docs:
             return []
 
-        scores = self.cross_encoder.predict([(search_text, doc) for doc in docs])
-        ranked = sorted(
-            zip(docs, metas, scores),
-            key=lambda item: float(item[2]),
-            reverse=True,
-        )[:top_k]
+        # Optional post-filtering by taste or cuisine corner
+        filtered = []
+        for doc, meta in zip(docs, metas):
+            if taste_filter and taste_filter != "All Tastes":
+                if taste_filter.lower() not in meta.get("tastes", "").lower():
+                    continue
+            if cuisine_filter and cuisine_filter != "All Corners":
+                if cuisine_filter.lower() != meta.get("cuisine", "").lower():
+                    continue
+            filtered.append((doc, meta))
 
-        return [
-            {
-                "rank": idx,
-                "target": meta.get("target", ""),
-                "substitute": meta.get("substitute", ""),
-                "vegan": bool(meta.get("vegan", False)),
-                "relevance_score": _sigmoid(score),
-                "details": doc,
-            }
-            for idx, (doc, meta, score) in enumerate(ranked, start=1)
-        ]
+        if not filtered:
+            filtered = list(zip(docs, metas))
+
+        scores = self.cross_encoder.predict([(search_text, doc) for doc, _ in filtered])
+        ranked = sorted(
+            zip(filtered, scores),
+            key=lambda item: float(item[1]),
+            reverse=True,
+        )
+
+        results = []
+        for (doc, meta), score in ranked:
+            prob = _sigmoid(score)
+            if prob < 0.08 and results:
+                continue
+            results.append(
+                {
+                    "rank": len(results) + 1,
+                    "target": meta.get("target", ""),
+                    "substitute": meta.get("substitute", ""),
+                    "tastes": meta.get("tastes", ""),
+                    "cuisine": meta.get("cuisine", ""),
+                    "vegan": bool(meta.get("vegan", False)),
+                    "relevance_score": prob,
+                    "details": doc,
+                }
+            )
+            if len(results) >= top_k:
+                break
+
+        return results
 
     def suggest_pairings(
         self,
         ingredients: list[str],
         dish_style: str | None = None,
-        top_k: int = 5,
+        target_taste: str | None = None,
+        cuisine_filter: str | None = None,
+        top_k: int = 6,
     ) -> list[dict]:
         total_docs = self.pair_collection.count()
         if total_docs == 0:
             return []
 
         normalized_inputs = {item.strip().lower() for item in ingredients}
-        prompt = (
-            f"Ingredients that pair harmoniously with {', '.join(ingredients)} "
-            f"through shared flavor compounds and culinary co-occurrence"
-        )
+        prompt_parts = [
+            f"Ingredients that pair harmoniously with {', '.join(ingredients)} through shared flavor compounds and culinary co-occurrence"
+        ]
         if dish_style:
-            prompt += f" in {dish_style}"
+            prompt_parts.append(f"for {dish_style}")
+        if target_taste and target_taste != "All Tastes":
+            prompt_parts.append(f"adding {target_taste} taste dimension")
+        if cuisine_filter and cuisine_filter != "All Corners":
+            prompt_parts.append(f"in {cuisine_filter} cooking")
 
+        prompt = " ".join(prompt_parts)
         q_vec = self.bi_encoder.encode([prompt], normalize_embeddings=True).tolist()
-        n_candidates = min(max(top_k * 4, 20), total_docs)
 
-        raw = self.pair_collection.query(query_embeddings=q_vec, n_results=n_candidates)
+        raw = self.pair_collection.query(query_embeddings=q_vec, n_results=min(30, total_docs))
         docs = raw["documents"][0]
         metas = raw["metadatas"][0]
 
-        filtered = [
-            (doc, meta)
-            for doc, meta in zip(docs, metas)
-            if meta.get("ingredient", "").lower() not in normalized_inputs
-        ]
+        filtered = []
+        for doc, meta in zip(docs, metas):
+            if meta.get("ingredient", "").lower() in normalized_inputs:
+                continue
+            if target_taste and target_taste != "All Tastes":
+                if target_taste.lower() not in meta.get("tastes", "").lower():
+                    continue
+            if cuisine_filter and cuisine_filter != "All Corners":
+                if cuisine_filter.lower() != meta.get("cuisine", "").lower():
+                    continue
+            filtered.append((doc, meta))
+
         if not filtered:
-            return []
+            filtered = [
+                (doc, meta)
+                for doc, meta in zip(docs, metas)
+                if meta.get("ingredient", "").lower() not in normalized_inputs
+            ]
 
         scores = self.cross_encoder.predict([(prompt, doc) for doc, _ in filtered])
         ranked = sorted(
@@ -116,6 +164,8 @@ class FlavorEngine:
             {
                 "rank": idx,
                 "ingredient": meta.get("ingredient", ""),
+                "tastes": meta.get("tastes", ""),
+                "cuisine": meta.get("cuisine", ""),
                 "relevance_score": _sigmoid(score),
                 "common_partners": meta.get("partners", ""),
                 "compounds": meta.get("compounds", ""),
