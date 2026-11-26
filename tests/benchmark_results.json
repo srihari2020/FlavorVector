@@ -1,0 +1,160 @@
+{
+  "device": "cuda",
+  "total_cases": 25,
+  "hit_rate_at_1": 100.0,
+  "hit_rate_at_3": 100.0,
+  "mrr": 1.0,
+  "avg_latency_ms": 84.76,
+  "cases": [
+    {
+      "query": "what can replace buttermilk and give the same tanginess in pancakes?",
+      "found_rank": 1,
+      "latency_ms": 707.2,
+      "top_hit": "1 cup whole milk + 1 tbsp fresh lemon juice (rest 10 min)"
+    },
+    {
+      "query": "vegan substitute for buttermilk in cornbread",
+      "found_rank": 1,
+      "latency_ms": 52.66,
+      "top_hit": "1 cup unsweetened soy milk + 1 tbsp apple cider vinegar"
+    },
+    {
+      "query": "replace egg as a binder in meatballs",
+      "found_rank": 1,
+      "latency_ms": 47.17,
+      "top_hit": "1 tbsp ground flaxseed + 3 tbsp warm water (rest 10 min until gelled)"
+    },
+    {
+      "query": "replace egg for airy lift and leavening in sponge cake",
+      "found_rank": 1,
+      "latency_ms": 50.8,
+      "top_hit": "1 tsp baking soda + 1 tbsp white or apple cider vinegar"
+    },
+    {
+      "query": "vegan substitute for whipped egg whites in meringue",
+      "found_rank": 1,
+      "latency_ms": 49.3,
+      "top_hit": "3 tbsp aquafaba (chickpea cooking liquid) whipped with pinch cream of tartar"
+    },
+    {
+      "query": "what can I use instead of sugar in a banana shake?",
+      "found_rank": 1,
+      "latency_ms": 54.47,
+      "top_hit": "3/4 cup pure maple syrup per 1 cup sugar (reduce liquid by 3 tbsp)"
+    },
+    {
+      "query": "unrefined Indian sweetener replacement for brown sugar in kheer",
+      "found_rank": 1,
+      "latency_ms": 56.65,
+      "top_hit": "1 cup grated jaggery (gur) or palm/coconut sugar per 1 cup sugar"
+    },
+    {
+      "query": "substitute for tamarind paste in sambar",
+      "found_rank": 1,
+      "latency_ms": 53.06,
+      "top_hit": "1 tsp amchur (dried mango powder) + 1 tsp lime juice + 1/2 tsp jaggery"
+    },
+    {
+      "query": "what replaces kokum in coastal fish curry?",
+      "found_rank": 1,
+      "latency_ms": 176.45,
+      "top_hit": "1 tbsp tamarind pulp + splash of pomegranate juice or lime juice"
+    },
+    {
+      "query": "dry citrus spice alternative for ground sumac in fattoush",
+      "found_rank": 1,
+      "latency_ms": 53.3,
+      "top_hit": "1 tsp finely grated lemon zest + 1/2 tsp citric acid or splash of lemon juice"
+    },
+    {
+      "query": "vegan substitute for fish sauce umami in stir-fry",
+      "found_rank": 1,
+      "latency_ms": 57.98,
+      "top_hit": "1 tbsp soy sauce + 1/4 tsp rice vinegar + pinch of crushed nori or mushroom powder"
+    },
+    {
+      "query": "vegetarian replacement for oyster sauce in noodles",
+      "found_rank": 1,
+      "latency_ms": 53.52,
+      "top_hit": "1 tbsp vegetarian mushroom stir-fry sauce (or 2 tsp soy sauce + 1 tsp hoisin + pinch sugar)"
+    },
+    {
+      "query": "what can replace miso paste in ramen broth?",
+      "found_rank": 1,
+      "latency_ms": 51.72,
+      "top_hit": "2 tsp tahini + 1 tsp soy sauce + pinch of nutritional yeast"
+    },
+    {
+      "query": "dairy-free substitute for grated parmesan cheese on pasta",
+      "found_rank": 1,
+      "latency_ms": 48.89,
+      "top_hit": "3 tbsp nutritional yeast + 1 tbsp finely ground raw cashews + 1/4 tsp salt"
+    },
+    {
+      "query": "vegan replacement for anchovy fillets in puttanesca sauce",
+      "found_rank": 1,
+      "latency_ms": 50.73,
+      "top_hit": "1 tbsp chopped capers + 1/2 tsp miso paste + pinch of kelp/nori"
+    },
+    {
+      "query": "substitute for asafoetida hing in dal tadka",
+      "found_rank": 1,
+      "latency_ms": 54.88,
+      "top_hit": "1/2 tsp garlic powder + 1/2 tsp onion powder bloomed in hot oil/ghee"
+    },
+    {
+      "query": "what can replace gochujang chili paste in bibimbap?",
+      "found_rank": 1,
+      "latency_ms": 56.07,
+      "top_hit": "1 tbsp red miso + 1 tsp gochugaru or cayenne + 1 tsp honey/maple + 1/2 tsp rice vinegar"
+    },
+    {
+      "query": "substitute for chipotle in adobo in tacos",
+      "found_rank": 1,
+      "latency_ms": 55.96,
+      "top_hit": "1 tsp smoked paprika + 1/4 tsp cayenne + 1 tsp tomato paste + 1/2 tsp cider vinegar"
+    },
+    {
+      "query": "what replaces kasuri methi dried fenugreek leaves in butter masala?",
+      "found_rank": 1,
+      "latency_ms": 53.24,
+      "top_hit": "1 tbsp dried celery leaves + 1/4 tsp crushed fennel seeds"
+    },
+    {
+      "query": "substitute for fresh curry leaves in South Indian tadka",
+      "found_rank": 1,
+      "latency_ms": 58.58,
+      "top_hit": "1 bay leaf + 1/2 tsp finely grated lime zest bloomed in hot oil"
+    },
+    {
+      "query": "what can I use instead of coconut chutney with masala dosa?",
+      "found_rank": 1,
+      "latency_ms": 54.5,
+      "top_hit": "Roasted Peanut (Groundnut) Chutney blended with roasted chana dal, green chili, ginger, tamarind & curry leaf tadka"
+    },
+    {
+      "query": "vegan substitute for paneer in palak paneer",
+      "found_rank": 1,
+      "latency_ms": 60.25,
+      "top_hit": "200g pressed extra-firm tofu (tossed with 1/2 tsp lemon juice & pinch salt) or halloumi"
+    },
+    {
+      "query": "dairy-free heavy cream substitute for tomato gravy",
+      "found_rank": 1,
+      "latency_ms": 50.14,
+      "top_hit": "1/2 cup soaked raw cashews blended silky-smooth with 3/4 cup water"
+    },
+    {
+      "query": "glossy sauce thickener replacement for cornstarch",
+      "found_rank": 1,
+      "latency_ms": 47.83,
+      "top_hit": "1 tbsp arrowroot powder or potato starch (mixed in cold water slurry)"
+    },
+    {
+      "query": "vegan meaty substitute for boneless chicken in biryani",
+      "found_rank": 1,
+      "latency_ms": 63.78,
+      "top_hit": "Hydrated soya chunks (meal maker), king oyster mushrooms, or young green jackfruit"
+    }
+  ]
+}

@@ -22,8 +22,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FlavorVector API",
-    description="Semantic Cooking Substitution & Flavor-Pairing Engine",
-    version="0.1.0",
+    description="Real-Time Semantic Cooking Substitution & Flavor-Pairing Engine",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -45,20 +45,30 @@ def health_check():
 
 @app.post("/substitute", response_model=SubstituteResponse)
 def substitute(req: SubstituteRequest):
-    results = engine.search_substitutes(
+    results, fetched_live = engine.search_substitutes(
         query=req.query,
         dish_context=req.dish_context,
+        taste_filter=req.taste_filter,
+        cuisine_filter=req.cuisine_filter,
         vegan_only=req.vegan_only,
+        force_live=req.force_live,
         top_k=req.top_k,
     )
-    return SubstituteResponse(query=req.query, results=results)
+    return SubstituteResponse(query=req.query, fetched_live=fetched_live, results=results)
 
 
 @app.post("/pair", response_model=PairingResponse)
 def pair(req: PairingRequest):
-    suggestions = engine.suggest_pairings(
+    suggestions, fetched_live = engine.suggest_pairings(
         ingredients=req.ingredients,
         dish_style=req.dish_style,
+        target_taste=req.target_taste,
+        cuisine_filter=req.cuisine_filter,
+        force_live=req.force_live,
         top_k=req.top_k,
     )
-    return PairingResponse(input_ingredients=req.ingredients, suggestions=suggestions)
+    return PairingResponse(
+        input_ingredients=req.ingredients,
+        fetched_live=fetched_live,
+        suggestions=suggestions,
+    )
