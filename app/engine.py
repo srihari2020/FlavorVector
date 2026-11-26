@@ -9,8 +9,11 @@ from app.live_fetcher import LiveCulinaryFetcher, parse_substitution_intent
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CHROMA_DIR = PROJECT_ROOT / "chroma_db"
 
-BI_ENCODER_NAME = "BAAI/bge-base-en-v1.5"
-CROSS_ENCODER_NAME = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+LOCAL_BI_DIR = PROJECT_ROOT / "models" / "bi_encoder"
+LOCAL_CROSS_DIR = PROJECT_ROOT / "models" / "cross_encoder"
+
+BI_ENCODER_NAME = str(LOCAL_BI_DIR) if LOCAL_BI_DIR.exists() else "BAAI/bge-base-en-v1.5"
+CROSS_ENCODER_NAME = str(LOCAL_CROSS_DIR) if LOCAL_CROSS_DIR.exists() else "cross-encoder/ms-marco-MiniLM-L-6-v2"
 
 
 def _sigmoid(logit: float) -> float:

@@ -3,10 +3,20 @@ import shutil
 from pathlib import Path
 import chromadb
 from huggingface_hub import HfApi, get_token, login
+from sentence_transformers import CrossEncoder, SentenceTransformer
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DIST_DIR = PROJECT_ROOT / "hf_model_dist"
 FENCE = "`" * 3
+
+INCLUDE_DIRS = ["app", "scripts", "tests", "assets", "chroma_db", "data"]
+INCLUDE_FILES = [
+    "streamlit_app.py",
+    "requirements.txt",
+    "Dockerfile",
+    "docker-compose.yml",
+    ".gitignore",
+]
 
 
 def build_model_card(bench: dict, repo_id: str) -> str:
@@ -41,16 +51,16 @@ tags:
 
 ![FlavorVector 10-Taste & Cuisine Coverage](assets/taste_coverage.png)
 
-**FlavorVector** is a local-first, two-stage semantic cooking substitution, flavor-pairing, and pantry flavor-bridge engine grounded in food-science chemistry and volatile aroma compounds.
+**FlavorVector** is a standalone, local-first semantic cooking substitution, flavor-pairing, and pantry flavor-bridge engine grounded in food-science chemistry and volatile aroma compounds. This repository includes the complete codebase, Streamlit UI, FastAPI service, pre-indexed ChromaDB database, and bundled transformer weights for offline execution.
 
-## Model & Index Architecture
-- **Stage 1 — Dense Bi-Encoder Retrieval:** `BAAI/bge-base-en-v1.5` over pre-indexed `ChromaDB` cosine collections (`flavor_substitutions` and `flavor_pairings`).
-- **Stage 2 — Cross-Encoder Reranking:** `cross-encoder/ms-marco-MiniLM-L-6-v2` with sigmoid confidence calibration.
-- **10-Taste & Mouthfeel Taxonomy:** `sweet`, `salty`, `sour`, `bitter`, `umami`, `spicy_pungent`, `astringent`, `cooling`, `fatty_rich`, and `kokumi` across 7 global culinary regions.
-- **Included Artifacts:**
-  - `chroma_db/` — Pre-built persistent vector database ({atlas['total_vectors']} vectors) ready for zero-build inference.
-  - `flavor_atlas.json` — Exported structured food-science substitution rules and ingredient compound profiles.
-  - `app/` — Modular Python retrieval engine (`FlavorEngine`), kitchen fraction scaler (`balancer.py`), and live web knowledge fetcher (`live_fetcher.py`).
+## Repository Contents
+- `models/bi_encoder/` — Bundled `BAAI/bge-base-en-v1.5` dense retrieval model (`~438 MB`).
+- `models/cross_encoder/` — Bundled `cross-encoder/ms-marco-MiniLM-L-6-v2` reranker (`~91 MB`).
+- `chroma_db/` — Pre-built persistent vector store ({atlas['total_vectors']} vectors across `flavor_substitutions` and `flavor_pairings`).
+- `flavor_atlas.json` — Exported structured food-science substitution rules and ingredient compound profiles.
+- `app/` — Core retrieval engine (`engine.py`), live web synthesis (`live_fetcher.py`), ratio scaler (`balancer.py`), and FastAPI endpoints (`main.py`).
+- `streamlit_app.py` — Interactive Streamlit dashboard with 10-taste Plotly radar charts.
+- `scripts/` & `tests/` — Atlas builders, 25-case benchmark runner, PNG chart generator, and `pytest` suite.
 
 ## Evaluation Benchmarks
 Benchmarked across **25 culinary edge cases** on `{sys_info['gpu_name'] or sys_info['device'].upper()}`:
@@ -66,38 +76,26 @@ Benchmarked across **25 culinary edge cases** on `{sys_info['gpu_name'] or sys_i
 | **Latency** | **Pantry Flavor Bridge (p50 / p95)** | — | **{lat['bridge_p50_ms']} ms / {lat['bridge_p95_ms']} ms** |
 | **Throughput** | **Sustained QPS** | — | **{qps['substitutions']} QPS** (`/substitute`) · **{qps['pairings']} QPS** (`/pair`) |
 
-## Usage with `huggingface_hub`
+## Standalone Usage
 
 {FENCE}python
 import sys
 from huggingface_hub import snapshot_download
 
-# 1. Download the pre-indexed ChromaDB store and retrieval engine
+# Downloads the full repo (bundled bi-encoder, cross-encoder, chroma_db, and app)
 local_dir = snapshot_download(repo_id="{repo_id}", repo_type="model")
 sys.path.insert(0, local_dir)
 
 from app.engine import FlavorEngine
 
-# 2. Load the two-stage engine (uses pre-built chroma_db automatically)
 engine = FlavorEngine()
 
-# 3. Search role-matched cooking substitutions
 subs, _ = engine.search_substitutes(
     query="what can replace buttermilk and give the same tanginess in pancakes?",
     top_k=3,
 )
 for hit in subs:
     print(f"#{{hit['rank']}} ({{hit['relevance_score']*100:.1f}}%): {{hit['substitute']}}")
-
-# 4. Find complementary flavor pairings
-pairings, _ = engine.suggest_pairings(["garlic", "lemon", "thyme"], top_k=5)
-for p in pairings:
-    print(f"#{{p['rank']}}: {{p['ingredient']}} -> {{p['compounds']}}")
-
-# 5. Solve missing bridge ingredients for what is in your pantry
-bridges = engine.find_flavor_bridges(["tomato", "garlic", "paneer"], top_k=3)
-for b in bridges:
-    print(f"Bridge: {{b['ingredient']}} (links {{b['bridge_coverage']}} items)")
 {FENCE}
 """
 
@@ -114,17 +112,28 @@ def main() -> None:
         shutil.rmtree(DIST_DIR)
     DIST_DIR.mkdir(parents=True)
 
-    # 1. Copy pre-built ChromaDB, benchmark PNGs, and inference package
-    shutil.copytree(PROJECT_ROOT / "chroma_db", DIST_DIR / "chroma_db")
-    shutil.copytree(PROJECT_ROOT / "assets", DIST_DIR / "assets")
-    shutil.copytree(
-        PROJECT_ROOT / "app",
-        DIST_DIR / "app",
-        ignore=shutil.ignore_patterns("__pycache__", "*.pyc"),
-    )
-    shutil.copy2(PROJECT_ROOT / "requirements.txt", DIST_DIR / "requirements.txt")
+    # 1. Save full Bi-Encoder and Cross-Encoder model weights locally
+    print("Saving BAAI/bge-base-en-v1.5 weights (~438 MB)...")
+    bi_model = SentenceTransformer("BAAI/bge-base-en-v1.5", device="cpu")
+    bi_model.save(str(DIST_DIR / "models" / "bi_encoder"))
 
-    # 2. Export clean JSON dataset snapshot from ChromaDB collections
+    print("Saving cross-encoder/ms-marco-MiniLM-L-6-v2 weights (~91 MB)...")
+    ce_model = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2", device="cpu")
+    ce_model.save(str(DIST_DIR / "models" / "cross_encoder"))
+
+    # 2. Copy all project directories and root files
+    ignore_fn = shutil.ignore_patterns("__pycache__", "*.pyc", ".DS_Store")
+    for folder in INCLUDE_DIRS:
+        src = PROJECT_ROOT / folder
+        if src.exists():
+            shutil.copytree(src, DIST_DIR / folder, ignore=ignore_fn)
+
+    for fname in INCLUDE_FILES:
+        src = PROJECT_ROOT / fname
+        if src.exists():
+            shutil.copy2(src, DIST_DIR / fname)
+
+    # 3. Export JSON snapshot of all indexed ChromaDB collections
     client = chromadb.PersistentClient(path=str(PROJECT_ROOT / "chroma_db"))
     sub_data = client.get_collection("flavor_substitutions").get(include=["metadatas", "documents"])
     pair_data = client.get_collection("flavor_pairings").get(include=["metadatas", "documents"])
@@ -141,20 +150,22 @@ def main() -> None:
     }
     (DIST_DIR / "flavor_atlas.json").write_text(json.dumps(atlas_export, indent=2), encoding="utf-8")
 
-    # 3. Generate Model Card README.md
+    # 4. Generate Model Card README.md
     bench = json.loads((PROJECT_ROOT / "tests" / "full_benchmark.json").read_text(encoding="utf-8"))
     (DIST_DIR / "README.md").write_text(build_model_card(bench, repo_id), encoding="utf-8")
 
-    # 4. Create Model repository (not Space) and upload artifacts
+    total_mb = sum(f.stat().st_size for f in DIST_DIR.rglob("*") if f.is_file()) / (1024 * 1024)
+    print(f"Uploading complete {total_mb:.1f} MB bundle to {repo_id}...")
+
     api.create_repo(repo_id=repo_id, repo_type="model", exist_ok=True)
     api.upload_folder(
         folder_path=str(DIST_DIR),
         repo_id=repo_id,
         repo_type="model",
-        commit_message="Upload FlavorVector pre-indexed ChromaDB, food-science atlas, and benchmarks",
+        commit_message="Upload complete FlavorVector bundle (model weights, ChromaDB, UI, API, scripts & tests)",
     )
 
-    print(f"\nPublished Hugging Face Model Repository: https://huggingface.co/{repo_id}")
+    print(f"\nDone! Full repository uploaded: https://huggingface.co/{repo_id}")
 
 
 if __name__ == "__main__":
