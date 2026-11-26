@@ -1,8 +1,11 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
+from app.balancer import scale_substitution_text
 from app.engine import FlavorEngine
 from app.schemas import (
+    BridgeRequest,
+    BridgeResponse,
     PairingRequest,
     PairingResponse,
     SubstituteRequest,
@@ -23,7 +26,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FlavorVector API",
     description="Real-Time Semantic Cooking Substitution & Flavor-Pairing Engine",
-    version="1.0.0",
+    version="1.1.0",
     lifespan=lifespan,
 )
 
@@ -54,6 +57,9 @@ def substitute(req: SubstituteRequest):
         force_live=req.force_live,
         top_k=req.top_k,
     )
+    if req.batch_scale != 1.0:
+        for item in results:
+            item["substitute"] = scale_substitution_text(item["substitute"], req.batch_scale)
     return SubstituteResponse(query=req.query, fetched_live=fetched_live, results=results)
 
 
@@ -72,3 +78,13 @@ def pair(req: PairingRequest):
         fetched_live=fetched_live,
         suggestions=suggestions,
     )
+
+
+@app.post("/bridge", response_model=BridgeResponse)
+def bridge(req: BridgeRequest):
+    bridges = engine.find_flavor_bridges(
+        pantry=req.pantry,
+        dish_goal=req.dish_goal,
+        top_k=req.top_k,
+    )
+    return BridgeResponse(pantry=req.pantry, bridges=bridges)

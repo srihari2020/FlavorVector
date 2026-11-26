@@ -10,6 +10,7 @@ class SubstituteRequest(BaseModel):
     dish_context: str | None = Field(default=None, examples=["fluffy pancakes"])
     taste_filter: str | None = Field(default=None, examples=["sour"])
     cuisine_filter: str | None = Field(default=None, examples=["Baking & Pastry"])
+    batch_scale: float = Field(default=1.0, gt=0.0, le=20.0)
     vegan_only: bool = Field(default=False)
     force_live: bool = Field(default=False)
     top_k: int = Field(default=4, ge=1, le=10)
@@ -57,3 +58,26 @@ class PairingResponse(BaseModel):
     input_ingredients: list[str]
     fetched_live: bool
     suggestions: list[PairingHit]
+
+
+class BridgeRequest(BaseModel):
+    pantry: list[str] = Field(..., min_length=2, max_length=8, examples=[["tomato", "garlic", "paneer"]])
+    dish_goal: str | None = Field(default=None, examples=["creamy skillet curry"])
+    top_k: int = Field(default=5, ge=1, le=12)
+
+
+class BridgeHit(BaseModel):
+    rank: int
+    ingredient: str
+    bridged_items: list[str]
+    bridge_coverage: str
+    tastes: str
+    cuisine: str
+    compounds: str
+    relevance_score: float
+    details: str
+
+
+class BridgeResponse(BaseModel):
+    pantry: list[str]
+    bridges: list[BridgeHit]

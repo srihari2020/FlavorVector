@@ -270,3 +270,63 @@ class FlavorEngine:
             for idx, ((doc, meta), score) in enumerate(ranked, start=1)
         ]
         return results, fetched_live
+
+    def find_flavor_bridges(
+        self,
+        pantry: list[str],
+        dish_goal: str | None = None,
+        top_k: int = 5,
+    ) -> list[dict]:
+        pantry_clean = [x.strip().lower() for x in pantry if x.strip()]
+        pantry_set = set(pantry_clean)
+        if not pantry_clean:
+            return []
+
+        records = self.pair_collection.get(include=["metadatas", "documents"])
+        metas = records.get("metadatas") or []
+        docs = records.get("documents") or []
+        if not metas:
+            return []
+
+        candidates = []
+        for doc, meta in zip(docs, metas):
+            ing = meta.get("ingredient", "").strip().lower()
+            if not ing or ing in pantry_set:
+                continue
+            partners = {x.strip().lower() for x in meta.get("partners", "").split(",") if x.strip()}
+            bridged = sorted(pantry_set.intersection(partners))
+            candidates.append((ing, doc, meta, bridged))
+
+        prompt = (
+            f"Single bridge ingredient that unites {', '.join(pantry_clean)} "
+            f"into a cohesive dish through shared aroma compounds and culinary pairing"
+        )
+        if dish_goal:
+            prompt += f" ({dish_goal})"
+
+        scores = self.cross_encoder.predict([(prompt, doc) for _, doc, _, _ in candidates])
+
+        scored = []
+        for (ing, doc, meta, bridged), logit in zip(candidates, scores):
+            prob = _sigmoid(logit)
+            # Combine neural relevance with multi-ingredient graph connectivity
+            bridge_bonus = 0.15 * (len(bridged) / max(1, len(pantry_clean)))
+            combined = round(min(0.9999, prob + bridge_bonus), 4)
+            scored.append((combined, prob, ing, doc, meta, bridged))
+
+        scored.sort(key=lambda x: (len(x[5]), x[0]), reverse=True)
+
+        return [
+            {
+                "rank": idx,
+                "ingredient": ing,
+                "bridged_items": bridged,
+                "bridge_coverage": f"{len(bridged)}/{len(pantry_clean)}",
+                "tastes": meta.get("tastes", ""),
+                "cuisine": meta.get("cuisine", ""),
+                "compounds": meta.get("compounds", ""),
+                "relevance_score": combined,
+                "details": doc,
+            }
+            for idx, (combined, _, ing, doc, meta, bridged) in enumerate(scored[:top_k], start=1)
+        ]

@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 import streamlit as st
+from app.balancer import scale_substitution_text
 from app.engine import FlavorEngine
 
 st.set_page_config(
@@ -143,7 +144,9 @@ with st.sidebar:
         "3. Real-time web synthesis + `ChromaDB` auto-indexing"
     )
 
-tab_sub, tab_pair = st.tabs(["🔄 Functional Substitutions", "🧬 Flavor Pairing"])
+tab_sub, tab_pair, tab_bridge = st.tabs(
+    ["🔄 Functional Substitutions", "🧬 Flavor Pairing", "🌉 Pantry Flavor Bridge"]
+)
 
 with tab_sub:
     st.subheader("Find Role-Matched Ingredient Substitutes")
@@ -151,12 +154,13 @@ with tab_sub:
         "What are you trying to replace and why?",
         value="what can replace buttermilk and give the same tanginess in pancakes?",
     )
-    col1, col2, col3, col4, col5 = st.columns([2, 1.2, 1.4, 0.9, 1.1])
-    dish_context = col1.text_input("Dish Context (optional)", placeholder="e.g., pancakes, samosa, pickle")
+    col1, col2, col3, col4, col5, col6 = st.columns([1.8, 1.1, 1.3, 0.9, 0.8, 1.0])
+    dish_context = col1.text_input("Dish Context (optional)", placeholder="e.g., pancakes, samosa")
     taste_filter = col2.selectbox("Taste Profile", TASTE_OPTIONS, key="sub_taste")
     cuisine_filter = col3.selectbox("Culinary Corner", CUISINE_OPTIONS, key="sub_cuisine")
-    vegan_only = col4.toggle("Vegan Only", value=False)
-    force_live_sub = col5.toggle("Force Live Fetch", value=False)
+    batch_scale = col4.selectbox("Batch Scale", [0.5, 1.0, 1.5, 2.0, 3.0], index=1, format_func=lambda x: f"{x:g}x")
+    vegan_only = col5.toggle("Vegan", value=False)
+    force_live_sub = col6.toggle("Live Fetch", value=False)
 
     if st.button("Search Substitutes", type="primary", use_container_width=True):
         with st.spinner("Searching local vectors and live culinary sources..."):
@@ -175,15 +179,17 @@ with tab_sub:
             st.info("⚡ Retrieved directly from local ChromaDB vector cache.")
 
         if not hits:
-            st.warning("No matching substitutions found. Try toggling 'Force Live Fetch' or clearing filters.")
+            st.warning("No matching substitutions found. Try toggling 'Live Fetch' or clearing filters.")
         for idx, hit in enumerate(hits):
+            scaled_sub = scale_substitution_text(hit["substitute"], multiplier=batch_scale)
             with st.container(border=True):
                 left, mid, right = st.columns([3.2, 1.8, 0.9])
                 badge = "🌱 Vegan" if hit["vegan"] else "🥛 Dairy/Animal"
                 src_badge = "🌐 Live Web" if hit.get("source") == "live_web" else "🗄️ Local Atlas"
-                left.markdown(f"### #{hit['rank']} — {hit['substitute']}")
+                scale_tag = f" · ⚖️ Scaled {batch_scale:g}x" if batch_scale != 1.0 else ""
+                left.markdown(f"### #{hit['rank']} — {scaled_sub}")
                 left.caption(
-                    f"Replaces: **{hit['target']}** · {badge} · {src_badge} · "
+                    f"Replaces: **{hit['target']}** · {badge} · {src_badge}{scale_tag} · "
                     f"Taste: `{hit['tastes']}` · Corner: **{hit['cuisine']}**"
                 )
                 left.code(hit["details"], language="yaml")
@@ -240,3 +246,37 @@ with tab_pair:
                     right.metric("Affinity", f"{item['relevance_score'] * 100:.1f}%")
                     with st.expander("Full Semantic Profile"):
                         st.text(item["details"])
+
+with tab_bridge:
+    st.subheader("What's in My Pantry? Find the Connecting Bridge Ingredient")
+    pantry_input = st.text_input(
+        "Ingredients you already have (comma-separated)",
+        value="tomato, garlic, paneer",
+    )
+    b1, b2 = st.columns([3, 1])
+    dish_goal = b1.text_input("Optional Dish Direction", placeholder="e.g., creamy gravy, quick skillet meal")
+    top_k_bridge = b2.slider("Bridge Candidates", min_value=2, max_value=10, value=5)
+
+    if st.button("Find Bridge Ingredients", type="primary", use_container_width=True):
+        pantry_items = [x.strip() for x in pantry_input.split(",") if x.strip()]
+        if len(pantry_items) < 2:
+            st.warning("Enter at least 2 ingredients to find a flavor bridge.")
+        else:
+            bridges = engine.find_flavor_bridges(
+                pantry=pantry_items,
+                dish_goal=dish_goal.strip() or None,
+                top_k=top_k_bridge,
+            )
+            if bridges:
+                st.plotly_chart(render_pairing_radar(bridges), use_container_width=True, key="bridge_radar")
+            for b in bridges:
+                with st.container(border=True):
+                    left, right = st.columns([4, 1])
+                    bridged_label = ", ".join(b["bridged_items"]) if b["bridged_items"] else "semantic harmony"
+                    left.markdown(f"### #{b['rank']} — {b['ingredient'].title()} *(Links {b['bridge_coverage']} items)*")
+                    left.caption(
+                        f"Bridges: **{bridged_label}** · Taste: `{b['tastes']}` · Corner: **{b['cuisine']}**"
+                    )
+                    if b["compounds"]:
+                        left.markdown(f"**Shared Aroma Compounds:** `{b['compounds']}`")
+                    right.metric("Bridge Score", f"{b['relevance_score'] * 100:.1f}%")
