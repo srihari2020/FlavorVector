@@ -4,7 +4,6 @@ import requests
 
 HEADERS = {"User-Agent": "FlavorVector/1.0 (Food-Science Retrieval Engine)"}
 
-# Whole meals/breads that must never be suggested as an ingredient/condiment substitute
 DISALLOWED_SUBSTITUTES = {
     "dosa", "idli", "samosa", "roti", "naan", "chapati", "paratha",
     "biryani", "pizza", "burger", "pasta", "bread", "rice", "upma", "poha",
@@ -33,12 +32,21 @@ def parse_substitution_intent(query: str, dish_context: str | None = None) -> tu
     return target, dish
 
 
+def _ensure_str_list(val, default: list[str]) -> list[str]:
+    if isinstance(val, list):
+        cleaned = [str(x).strip() for x in val if str(x).strip()]
+        return cleaned or default
+    if isinstance(val, str) and val.strip():
+        cleaned = [x.strip() for x in val.split(",") if x.strip()]
+        return cleaned or default
+    return default
+
+
 class LiveCulinaryFetcher:
     def __init__(self, timeout: float = 6.0) -> None:
         self.timeout = timeout
 
     def _wiki_extract_best(self, query: str) -> tuple[str, str]:
-        """Fetch the lead summary of the single closest Wikipedia article for the target ingredient."""
         url = "https://en.wikipedia.org/w/api.php"
         try:
             search_resp = requests.get(
@@ -81,7 +89,6 @@ class LiveCulinaryFetcher:
         return "", ""
 
     def _mealdb_cooccurrences(self, keyword: str) -> tuple[list[str], list[str]]:
-        """Return (co_occurring_ingredients, dish_names) from TheMealDB."""
         co_ings: list[str] = []
         dish_names: list[str] = []
         for endpoint in (
@@ -134,25 +141,60 @@ class LiveCulinaryFetcher:
             resp = requests.post(
                 "http://localhost:11434/api/generate",
                 json={"model": models[0], "prompt": prompt, "format": "json", "stream": False},
-                timeout=18.0,
+                timeout=20.0,
             )
-            return json.loads(resp.json().get("response", "{}"))
+            parsed = json.loads(resp.json().get("response", "{}"))
+            if isinstance(parsed, list):
+                return {"substitutes": parsed}
+            if isinstance(parsed, dict):
+                return parsed
+            return None
         except Exception:
             return None
 
     def _synthesize_from_food_science(self, target: str, dish: str, wiki_text: str, off_text: str) -> list[dict]:
-        """Rule-grounded food-science fallback driven by live Wikipedia/OpenFoodFacts composition."""
-        combined = f"{target} {wiki_text} {off_text}".lower()
+        combined = f"{target} {dish} {wiki_text} {off_text}".lower()
         slug = re.sub(r"[^a-z0-9]+", "_", target.lower())[:40]
         dish_list = [dish.lower()] if dish else ["savory snacks", "daily cooking"]
 
-        # 1. Fresh Herb / Chutney / Dip / Condiment profile
+        # 1. Pickling / Sour Fruit / Raw Mango profile
+        if any(k in combined for k in ("pickle", "achar", "avakaya", "raw mango", "unripe mango", "mango")):
+            return [
+                {
+                    "id": f"live_sub_{slug}_1",
+                    "target": target.title(),
+                    "substitute": "Unripe Green Papaya or Raw Gooseberry (Amla) — 1:1 diced ratio + 1 tbsp lemon juice",
+                    "tastes": ["sour", "astringent"],
+                    "cuisine": "Indian & South Asian",
+                    "role": "Firm pectin-rich flesh holds crunch in spiced oil/brine while supplying sharp tartness",
+                    "flavor_profile": "Crisp, tangy, mildly astringent fruit acidity",
+                    "compounds": ["citric acid", "malic acid", "pectin", "ascorbic acid"],
+                    "best_in": list(dict.fromkeys(dish_list + ["pickle", "achar", "chutney", "relishes"])),
+                    "avoid_in": ["sweet ripe mango desserts"],
+                    "vegan": True,
+                },
+                {
+                    "id": f"live_sub_{slug}_2",
+                    "target": target.title(),
+                    "substitute": "Unripe Green Tomatoes or Hog Plum (Ambarella / Amtekai) — 1:1 ratio",
+                    "tastes": ["sour", "umami"],
+                    "cuisine": "Indian & South Asian",
+                    "role": "High malic/citric acid and firm cell walls resist turning mushy under mustard-chili tempering",
+                    "flavor_profile": "Bright, tart, vegetal crunch",
+                    "compounds": ["malic acid", "citric acid", "glutamic acid"],
+                    "best_in": list(dict.fromkeys(dish_list + ["instant pickle", "thokku", "chutney"])),
+                    "avoid_in": ["milkshakes"],
+                    "vegan": True,
+                },
+            ]
+
+        # 2. Fresh Herb / Chutney / Dip / Condiment profile
         if any(k in combined for k in ("chutney", "coriander", "cilantro", "mint", "dip", "condiment", "relish", "sauce")):
             return [
                 {
                     "id": f"live_sub_{slug}_1",
                     "target": target.title(),
-                    "substitute": "Tamarind-Date (Imli) Chutney or Mint-Yogurt Raita Dip (3 tbsp yogurt + 1 tsp dried mint + pinch roasted cumin & lemon)",
+                    "substitute": "Tamarind-Date (Imli) Chutney or Mint-Yogurt Raita Dip",
                     "tastes": ["sour", "sweet", "cooling", "spicy_pungent"],
                     "cuisine": "Indian & South Asian",
                     "role": "Provides tart fruit/lactic acidity and fresh herbal aromatics to cut fried pastry richness",
@@ -165,7 +207,7 @@ class LiveCulinaryFetcher:
                 {
                     "id": f"live_sub_{slug}_2",
                     "target": target.title(),
-                    "substitute": "Cilantro-Lime Chimichurri / Salsa Verde (finely chopped parsley/cilantro + lime juice + green chili + garlic + olive oil)",
+                    "substitute": "Cilantro-Lime Chimichurri / Salsa Verde (parsley/cilantro + lime juice + green chili + garlic + olive oil)",
                     "tastes": ["sour", "cooling", "spicy_pungent"],
                     "cuisine": "Universal Pantry",
                     "role": "Fresh chlorophyll herb paste emulsified with citric acid and capsaicin heat",
@@ -177,33 +219,13 @@ class LiveCulinaryFetcher:
                 },
             ]
 
-        # 2. Spice / Herb / Seasoning profile
-        if any(k in combined for k in ("spice", "herb", "seed", "powder", "masala", "seasoning", "leaf", "leaves")):
-            role_desc = wiki_text[:200] if wiki_text else f"Aromatic seasoning profile matching {target}"
-            return [
-                {
-                    "id": f"live_sub_{slug}_1",
-                    "target": target.title(),
-                    "substitute": f"Balanced aromatic blend matching {target} (1:1 ratio adjusted to taste)",
-                    "tastes": ["spicy_pungent", "bitter"],
-                    "cuisine": "Live Web Atlas",
-                    "role": role_desc,
-                    "flavor_profile": f"Warm aromatic profile derived from {target}",
-                    "compounds": ["volatile terpenes", "essential oils"],
-                    "best_in": dish_list,
-                    "avoid_in": ["unspiced delicate pastries"],
-                    "vegan": True,
-                }
-            ]
-
-        # 3. General Ingredient fallback grounded strictly in live extract
         role_desc = wiki_text[:220] if wiki_text else f"Functional culinary equivalent for {target}"
         return [
             {
                 "id": f"live_sub_{slug}_1",
                 "target": target.title(),
-                "substitute": f"Culinary functional equivalent for {target} (match acidity, fat, and texture)",
-                "tastes": ["umami", "sour"],
+                "substitute": f"Culinary functional equivalent for {target} (match acidity, texture, and aroma)",
+                "tastes": ["sour", "umami"],
                 "cuisine": "Live Web Atlas",
                 "role": role_desc,
                 "flavor_profile": f"Matched to {target} composition",
@@ -221,43 +243,67 @@ class LiveCulinaryFetcher:
         off_text = off_info.get("ingredients_text", "")
 
         llm_prompt = (
-            "You are a food scientist. Return a JSON object with a single key 'substitutes' containing a list of "
-            "2 practical ingredient/condiment substitutes for the target below. "
-            "CRITICAL RULE: Never suggest a whole meal, bread, or pastry (such as dosa, roti, naan, rice, or samosa) "
-            "as a substitute for a condiment, spice, or ingredient. Give exact ratios and chemical/culinary reasons.\n"
-            "Each item must have keys: 'substitute' (string), 'tastes' (list of strings), 'cuisine' (string), "
-            "'role' (string), 'flavor_profile' (string), 'compounds' (list of strings), 'best_in' (list of strings), "
-            "'avoid_in' (list of strings), 'vegan' (bool).\n\n"
+            "You are a food scientist. Return ONLY valid JSON matching this exact structure:\n"
+            '{"substitutes": [{"substitute": "1 cup ingredient + ratio", "tastes": ["sour", "astringent"], '
+            '"cuisine": "Indian & South Asian", "role": "Chemical and textural role", '
+            '"flavor_profile": "Taste and aroma description", "compounds": ["citric acid", "pectin"], '
+            '"best_in": ["pickle", "chutney"], "avoid_in": ["desserts"], "vegan": true}]}\n'
+            "Rules: Provide 2 practical ingredient substitutes with exact ratios. "
+            "Never suggest whole meals or breads (dosa, roti, naan, rice, samosa) as substitutes.\n\n"
             f"Target to replace: {target}\n"
             f"Dish context: {dish or 'general cooking'}\n"
-            f"Reference composition ({wiki_title}): {wiki_text}\n"
-            f"Ingredient label data: {off_text}"
+            f"Reference ({wiki_title}): {wiki_text}\n"
+            f"Label info: {off_text}"
         )
 
         structured = self._try_ollama_structure(llm_prompt)
         cards = []
         slug = re.sub(r"[^a-z0-9]+", "_", target.lower())[:40]
 
-        if structured and isinstance(structured.get("substitutes"), list):
-            for idx, item in enumerate(structured["substitutes"][:2]):
-                sub_text = str(item.get("substitute", "")).strip()
-                if not sub_text or sub_text.lower() in DISALLOWED_SUBSTITUTES:
-                    continue
-                cards.append(
-                    {
-                        "id": f"live_sub_{slug}_{idx}",
-                        "target": target.title(),
-                        "substitute": sub_text,
-                        "tastes": item.get("tastes") or ["sour", "umami"],
-                        "cuisine": item.get("cuisine") or "Live Web Atlas",
-                        "role": item.get("role") or "Chemically matched flavor and texture substitute",
-                        "flavor_profile": item.get("flavor_profile") or "Balanced acidity and aroma",
-                        "compounds": item.get("compounds") or ["organic acids", "volatile terpenes"],
-                        "best_in": item.get("best_in") or ([dish] if dish else [target]),
-                        "avoid_in": item.get("avoid_in") or ["incompatible flavor profiles"],
-                        "vegan": bool(item.get("vegan", off_info.get("vegan", True))),
-                    }
-                )
+        raw_subs = structured.get("substitutes") if isinstance(structured, dict) else None
+        if isinstance(raw_subs, dict):
+            raw_subs = [raw_subs]
+
+        if isinstance(raw_subs, list):
+            for idx, item in enumerate(raw_subs[:2]):
+                if isinstance(item, str):
+                    sub_text = item.strip()
+                    if not sub_text or sub_text.lower() in DISALLOWED_SUBSTITUTES:
+                        continue
+                    cards.append(
+                        {
+                            "id": f"live_sub_{slug}_{idx}",
+                            "target": target.title(),
+                            "substitute": sub_text,
+                            "tastes": ["sour", "umami"],
+                            "cuisine": "Live Web Atlas",
+                            "role": f"Functional substitute for {target} in {dish or 'cooking'}",
+                            "flavor_profile": "Matched acidity, texture, and flavor balance",
+                            "compounds": ["organic acids", "volatile terpenes"],
+                            "best_in": [dish.lower()] if dish else [target.lower()],
+                            "avoid_in": ["incompatible flavor profiles"],
+                            "vegan": bool(off_info.get("vegan", True)),
+                        }
+                    )
+                elif isinstance(item, dict):
+                    sub_text = str(item.get("substitute", "")).strip()
+                    if not sub_text or sub_text.lower() in DISALLOWED_SUBSTITUTES:
+                        continue
+                    cards.append(
+                        {
+                            "id": f"live_sub_{slug}_{idx}",
+                            "target": target.title(),
+                            "substitute": sub_text,
+                            "tastes": _ensure_str_list(item.get("tastes"), ["sour", "umami"]),
+                            "cuisine": str(item.get("cuisine") or "Live Web Atlas"),
+                            "role": str(item.get("role") or "Chemically matched flavor and texture substitute"),
+                            "flavor_profile": str(item.get("flavor_profile") or "Balanced acidity and aroma"),
+                            "compounds": _ensure_str_list(item.get("compounds"), ["organic acids", "volatile terpenes"]),
+                            "best_in": _ensure_str_list(item.get("best_in"), [dish.lower()] if dish else [target.lower()]),
+                            "avoid_in": _ensure_str_list(item.get("avoid_in"), ["incompatible flavor profiles"]),
+                            "vegan": bool(item.get("vegan", off_info.get("vegan", True))),
+                        }
+                    )
 
         if not cards:
             cards = self._synthesize_from_food_science(target, dish, wiki_text, off_text)
